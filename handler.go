@@ -2,10 +2,11 @@ package eventsub_framework
 
 import (
 	"encoding/json"
-	esb "github.com/dnsge/twitch-eventsub-bindings"
-	"github.com/mozillazg/go-httpheader"
 	"io"
 	"net/http"
+
+	esb "github.com/dnsge/twitch-eventsub-bindings"
+	"github.com/mozillazg/go-httpheader"
 )
 
 const (
@@ -30,6 +31,7 @@ type SubHandler struct {
 	// IDTracker used to deduplicate notifications
 	IDTracker               IDTracker
 	OnDuplicateNotification func(h *esb.ResponseHeaders)
+	OnRawEvent              func(h *esb.ResponseHeaders, event json.RawMessage)
 
 	HandleChannelUpdate func(h *esb.ResponseHeaders, event *esb.EventChannelUpdate)
 	HandleChannelFollow func(h *esb.ResponseHeaders, event *esb.EventChannelFollow)
@@ -189,6 +191,10 @@ func (s *SubHandler) handleNotification(w http.ResponseWriter, bodyBytes []byte,
 		return
 	}
 	event := notification.Event
+
+	if s.OnRawEvent != nil {
+		go s.OnRawEvent(h, event)
+	}
 
 	switch h.SubscriptionType {
 	case "channel.update":
